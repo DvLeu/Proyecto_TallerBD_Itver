@@ -17,7 +17,7 @@ BEGIN
   WHERE CL_NUMERO = _CL_NUMERO AND L_MANZANA = _L_MANZANA AND L_NUMERO = _L_NUMERO;
 END //
 DELIMITER ;
--- Insertar ColonoLote
+-- Delete ColonoLote
 DELIMITER //
 CREATE PROCEDURE DeleteColonoLote(IN _CL_NUMERO double, IN _L_MANZANA char(3), IN _L_NUMERO char(6))
 BEGIN
