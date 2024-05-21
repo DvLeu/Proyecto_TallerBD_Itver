@@ -64,3 +64,31 @@ END //
 DELIMITER ;
 
 -- Eliminar en lote
+
+DELIMITER //
+
+CREATE PROCEDURE DeleteLote(
+    IN L_MANZANA CHAR(3),
+    IN L_NUMERO CHAR(6))
+BEGIN
+    -- Intentar eliminar el registro
+    DELETE FROM lote WHERE L_MANZANA = L_MANZANA AND L_NUMERO = L_NUMERO;
+END //
+
+DELIMITER ;
+
+-- Trigger para validar antes de eliminar.
+
+DELIMITER //
+
+CREATE TRIGGER BeforeDeleteLote
+BEFORE DELETE ON lote
+FOR EACH ROW
+BEGIN
+    -- Validación de relaciones
+    IF EXISTS (SELECT 1 FROM colono_lote WHERE L_MANZANA = OLD.L_MANZANA AND L_NUMERO = OLD.L_NUMERO) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: No se puede eliminar porque está referenciado en la tabla colono_lote.';
+    END IF;
+END //
+
+DELIMITER ;
