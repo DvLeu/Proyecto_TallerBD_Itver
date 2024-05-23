@@ -1,94 +1,160 @@
--- Insertar ColonoLote
-DELIMITER //
+DELIMITER $$
 
-CREATE PROCEDURE InsertColonoLote(
-    IN CL_NUMERO DOUBLE,
-    IN L_MANZANA CHAR(3),
-    IN L_NUMERO CHAR(6),
-    IN CL_TELEFONO CHAR(35),
-    IN CL_MAIL CHAR(100),
-    IN CL_IMPORTE DOUBLE,
-    IN CL_FECHA_ALTA DATETIME,
-    IN CL_FECHA_BAJA DATETIME,
-    IN CL_COMENTARIO VARCHAR(45))
+-- --------------------------------------------------------------------------------------------------------
+-- Funciones, Triggers y Procedimientos para la tabla Colono_Lote
+
+-- Función para verificar la existencia de un registro en Colono_Lote
+CREATE FUNCTION Existe_Colono_Lote(CL_NUMERO DOUBLE, L_MANZANA CHAR(3), L_NUMERO CHAR(6)) RETURNS BOOLEAN
 BEGIN
-    -- Validación de la clave primaria: no debe ser vacía ni nula
-    IF CL_NUMERO IS NULL THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: CL_NUMERO no puede estar vacío.';
-    END IF;
-
-    IF L_MANZANA IS NULL OR L_MANZANA = '' THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: L_MANZANA no puede estar vacía.';
-    END IF;
-
-    IF L_NUMERO IS NULL OR L_NUMERO = '' THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: L_NUMERO no puede estar vacío.';
-    END IF;
-
-    -- Inserción de los datos
-    INSERT INTO colono_lote (CL_NUMERO, L_MANZANA, L_NUMERO, CL_TELEFONO, CL_MAIL, CL_IMPORTE, CL_FECHA_ALTA, CL_FECHA_BAJA, CL_COMENTARIO)
-    VALUES (CL_NUMERO, L_MANZANA, L_NUMERO, CL_TELEFONO, CL_MAIL, CL_IMPORTE, CL_FECHA_ALTA, CL_FECHA_BAJA, CL_COMENTARIO);
-END //
-
-DELIMITER ;
--- Actualizar
-DELIMITER //
-
-CREATE PROCEDURE UpdateColonoLote(
-    IN CL_NUMERO DOUBLE,
-    IN L_MANZANA CHAR(3),
-    IN L_NUMERO CHAR(6),
-    IN CL_TELEFONO CHAR(35),
-    IN CL_MAIL CHAR(100),
-    IN CL_IMPORTE DOUBLE,
-    IN CL_FECHA_ALTA DATETIME,
-    IN CL_FECHA_BAJA DATETIME,
-    IN CL_COMENTARIO VARCHAR(45))
-BEGIN
-    -- Validación de la clave primaria: no debe ser vacía ni nula
-    IF CL_NUMERO IS NULL THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: CL_NUMERO no puede estar vacío.';
-    END IF;
-
-    IF L_MANZANA IS NULL OR L_MANZANA = '' THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: L_MANZANA no puede estar vacía.';
-    END IF;
-
-    IF L_NUMERO IS NULL OR L_NUMERO = '' THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: L_NUMERO no puede estar vacío.';
-    END IF;
-
-    -- Actualización de los datos
-    UPDATE colono_lote
-    SET CL_TELEFONO = CL_TELEFONO, CL_MAIL = CL_MAIL, CL_IMPORTE = CL_IMPORTE, CL_FECHA_ALTA = CL_FECHA_ALTA, CL_FECHA_BAJA = CL_FECHA_BAJA, CL_COMENTARIO = CL_COMENTARIO
+    DECLARE existe BOOLEAN;
+    SELECT COUNT(*) > 0 INTO existe
+    FROM Colono_Lote
     WHERE CL_NUMERO = CL_NUMERO AND L_MANZANA = L_MANZANA AND L_NUMERO = L_NUMERO;
-END //
+    RETURN existe;
+END $$
 
-DELIMITER ;
--- Eliminar ColonoLote
-DELIMITER //
-
-CREATE PROCEDURE DeleteColonoLote(
-    IN CL_NUMERO DOUBLE,
-    IN L_MANZANA CHAR(3),
-    IN L_NUMERO CHAR(6))
-BEGIN
-    -- Intentar eliminar el registro
-    DELETE FROM colono_lote WHERE CL_NUMERO = CL_NUMERO AND L_MANZANA = L_MANZANA AND L_NUMERO = L_NUMERO;
-END //
-
-DELIMITER ;
--- Validar antes de eliminar el colono
-DELIMITER //
-
-CREATE TRIGGER BeforeDeleteColonoLote
-BEFORE DELETE ON colono_lote
+-- Trigger antes de insertar en Colono_Lote
+CREATE TRIGGER Antes_Insert_Colono_Lote
+BEFORE INSERT ON Colono_Lote
 FOR EACH ROW
 BEGIN
-    -- Validación de relaciones
-    IF EXISTS (SELECT 1 FROM cargos WHERE L_MANZANA = OLD.L_MANZANA AND L_NUMERO = OLD.L_NUMERO) THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: No se puede eliminar porque está referenciado en la tabla cargos.';
+    IF Existe_Colono_Lote(NEW.CL_NUMERO, NEW.L_MANZANA, NEW.L_NUMERO) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El registro ya existe en Colono_Lote';
     END IF;
-END //
+END $$
+
+-- Trigger antes de actualizar en Colono_Lote
+CREATE TRIGGER Antes_Update_Colono_Lote
+BEFORE UPDATE ON Colono_Lote
+FOR EACH ROW
+BEGIN
+    IF NOT Existe_Colono_Lote(OLD.CL_NUMERO, OLD.L_MANZANA, OLD.L_NUMERO) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El registro no existe en Colono_Lote';
+    END IF;
+END $$
+
+-- Trigger antes de eliminar en Colono_Lote
+CREATE TRIGGER Antes_Delete_Colono_Lote
+BEFORE DELETE ON Colono_Lote
+FOR EACH ROW
+BEGIN
+    IF NOT Existe_Colono_Lote(OLD.CL_NUMERO, OLD.L_MANZANA, OLD.L_NUMERO) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El registro no existe en Colono_Lote';
+    END IF;
+END $$
+
+-- Función para verificar referencias en tablas hijas para Colono_Lote
+CREATE FUNCTION TieneReferencias_Colono_Lote(CL_NUMERO DOUBLE, L_MANZANA CHAR(3), L_NUMERO CHAR(6)) RETURNS BOOLEAN
+BEGIN
+    DECLARE existe BOOLEAN;
+    SELECT COUNT(*) > 0 INTO existe
+    FROM CARGOS
+    WHERE CL_NUMERO = CL_NUMERO AND L_MANZANA = L_MANZANA AND L_NUMERO = L_NUMERO;
+    RETURN existe;
+END $$
+
+-- Trigger antes de eliminar en Colono_Lote que verifica referencias en tablas hijas
+CREATE TRIGGER Antes_Delete_Colono_Lote_References
+BEFORE DELETE ON Colono_Lote
+FOR EACH ROW
+BEGIN
+    IF TieneReferencias_Colono_Lote(OLD.CL_NUMERO, OLD.L_MANZANA, OLD.L_NUMERO) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Existen referencias a este registro en otras tablas';
+    END IF;
+END $$
+
+-- Procedimiento almacenado para insertar en Colono_Lote
+CREATE PROCEDURE Insertar_Colono_Lote(
+    IN p_CL_NUMERO DOUBLE,
+    IN p_L_MANZANA CHAR(3),
+    IN p_L_NUMERO CHAR(6),
+    IN p_CL_TELEFONO CHAR(35),
+    IN p_CL_MAIL CHAR(100),
+    IN p_CL_IMPORTE DOUBLE,
+    IN p_CL_FECHA_ALTA DATETIME,
+    IN p_CL_FECHA_BAJA DATETIME,
+    IN p_CL_COMENTARIO VARCHAR(45)
+)
+BEGIN
+    -- Validación de tipos y restricciones aquí
+    IF p_CL_NUMERO IS NULL OR p_L_MANZANA IS NULL OR p_L_NUMERO IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El numero de cliente, el numero de manzana y numero de lote no puede ser NULL';
+    ELSE
+        -- Intentar la inserción
+        INSERT INTO Colono_Lote (
+            CL_NUMERO, L_MANZANA, L_NUMERO,
+            CL_TELEFONO, CL_MAIL, CL_IMPORTE,
+            CL_FECHA_ALTA, CL_FECHA_BAJA, CL_COMENTARIO
+        ) VALUES (
+            p_CL_NUMERO, p_L_MANZANA, p_L_NUMERO,
+            p_CL_TELEFONO, p_CL_MAIL, p_CL_IMPORTE,
+            p_CL_FECHA_ALTA, p_CL_FECHA_BAJA, p_CL_COMENTARIO
+        );
+    END IF;
+END $$
+
+-- Procedimiento almacenado para eliminar en Colono_Lote
+CREATE PROCEDURE Eliminar_Colono_Lote(
+    IN p_CL_NUMERO DOUBLE,
+    IN p_L_MANZANA CHAR(3),
+    IN p_L_NUMERO CHAR(6)
+)
+BEGIN
+    IF p_CL_NUMERO IS NULL OR p_L_MANZANA IS NULL OR p_L_NUMERO IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El numero de cliente, el numero de manzana y numero de lote no puede ser NULL';
+    ELSE
+        -- Intentar la eliminación
+        DELETE FROM Colono_Lote WHERE CL_NUMERO = p_CL_NUMERO AND L_MANZANA = p_L_MANZANA AND L_NUMERO = p_L_NUMERO;
+    END IF;
+END $$
+
+-- Procedimiento almacenado para buscar en Colono_Lote
+CREATE PROCEDURE Buscar_Colono_Lote(
+    IN p_CL_NUMERO DOUBLE,
+    IN p_L_MANZANA CHAR(3),
+    IN p_L_NUMERO CHAR(6)
+)
+BEGIN
+    -- Validar tipos de datos
+    IF p_CL_NUMERO IS NULL OR p_L_MANZANA IS NULL OR p_L_NUMERO IS NULL THEN
+        SELECT * FROM Colono_Lote;
+    ELSE
+        IF Existe_Colono_Lote(p_CL_NUMERO, p_L_MANZANA, p_L_NUMERO) THEN
+            SELECT * FROM Colono_Lote WHERE CL_NUMERO = p_CL_NUMERO AND L_MANZANA = p_L_MANZANA AND L_NUMERO = p_L_NUMERO;
+        ELSE
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El registro no existe en Colono_Lote';
+        END IF;
+    END IF;
+END $$
+
+-- Procedimiento almacenado para actualizar en Colono_Lote
+CREATE PROCEDURE Actualizar_Colono_Lote(
+    IN p_CL_NUMERO DOUBLE,
+    IN p_L_MANZANA CHAR(3),
+    IN p_L_NUMERO CHAR(6),
+    IN p_CL_TELEFONO CHAR(35),
+    IN p_CL_MAIL CHAR(100),
+    IN p_CL_IMPORTE DOUBLE,
+    IN p_CL_FECHA_ALTA DATETIME,
+    IN p_CL_FECHA_BAJA DATETIME,
+    IN p_CL_COMENTARIO VARCHAR(45)
+)
+BEGIN
+    -- Validación de tipos y restricciones aquí
+    IF p_CL_NUMERO IS NULL OR p_L_MANZANA IS NULL OR p_L_NUMERO IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El numero de cliente, el numero de manzana y numero de lote no puede ser NULL';
+    ELSE
+        -- Intentar la actualización
+        UPDATE Colono_Lote
+        SET
+            CL_TELEFONO = p_CL_TELEFONO,
+            CL_MAIL = p_CL_MAIL,
+            CL_IMPORTE = p_CL_IMPORTE,
+            CL_FECHA_ALTA = p_CL_FECHA_ALTA,
+            CL_FECHA_BAJA = p_CL_FECHA_BAJA,
+            CL_COMENTARIO = p_CL_COMENTARIO
+        WHERE CL_NUMERO = p_CL_NUMERO AND L_MANZANA = p_L_MANZANA AND L_NUMERO = p_L_NUMERO;
+    END IF;
+END $$
 
 DELIMITER ;
